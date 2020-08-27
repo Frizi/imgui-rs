@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::ptr;
 
-use super::{ImStr, Ui};
+use super::{ImStr, SliderFlags, Ui};
 
 macro_rules! impl_display_format {
     ($InputType:ident) => {
@@ -23,11 +23,11 @@ macro_rules! impl_speed {
     };
 }
 
-macro_rules! impl_power {
+macro_rules! impl_flags {
     ($InputType:ident) => {
         #[inline]
-        pub fn power(mut self, value: f32) -> Self {
-            self.power = value;
+        pub fn flags(mut self, value: SliderFlags) -> Self {
+            self.flags = value;
             self
         }
     };
@@ -57,7 +57,7 @@ pub struct DragFloat<'ui, 'p> {
     min: f32,
     max: f32,
     display_format: &'p ImStr,
-    power: f32,
+    flags: SliderFlags,
     _phantom: PhantomData<&'ui Ui<'ui>>,
 }
 
@@ -70,7 +70,7 @@ impl<'ui, 'p> DragFloat<'ui, 'p> {
             min: 0.0,
             max: 0.0,
             display_format: unsafe { ImStr::from_utf8_with_nul_unchecked(b"%.3f\0") },
-            power: 1.0,
+            flags: SliderFlags::NONE,
             _phantom: PhantomData,
         }
     }
@@ -84,7 +84,7 @@ impl<'ui, 'p> DragFloat<'ui, 'p> {
                 self.min,
                 self.max,
                 self.display_format.as_ptr(),
-                self.power,
+                self.flags.bits(),
             )
         }
     }
@@ -92,7 +92,7 @@ impl<'ui, 'p> DragFloat<'ui, 'p> {
     impl_display_format!(DragFloat);
     impl_min_max!(DragFloat, f32);
     impl_speed!(DragFloat);
-    impl_power!(DragFloat);
+    impl_flags!(DragFloat);
 }
 
 macro_rules! impl_drag_floatn {
@@ -105,7 +105,7 @@ macro_rules! impl_drag_floatn {
             min: f32,
             max: f32,
             display_format: &'p ImStr,
-            power: f32,
+            flags: SliderFlags,
             _phantom: PhantomData<&'ui Ui<'ui>>,
         }
 
@@ -118,7 +118,7 @@ macro_rules! impl_drag_floatn {
                     min: 0.0,
                     max: 0.0,
                     display_format: unsafe { ImStr::from_utf8_with_nul_unchecked(b"%.3f\0") },
-                    power: 1.0,
+                    flags: SliderFlags::NONE,
                     _phantom: PhantomData,
                 }
             }
@@ -132,7 +132,7 @@ macro_rules! impl_drag_floatn {
                         self.min,
                         self.max,
                         self.display_format.as_ptr(),
-                        self.power,
+                        self.flags.bits(),
                     )
                 }
             }
@@ -140,7 +140,7 @@ macro_rules! impl_drag_floatn {
             impl_display_format!(DragFloat);
             impl_min_max!(DragFloat, f32);
             impl_speed!(DragFloat);
-            impl_power!(DragFloat);
+            impl_flags!(DragFloat);
         }
     };
 }
@@ -159,7 +159,7 @@ pub struct DragFloatRange2<'ui, 'p> {
     max: f32,
     display_format: &'p ImStr,
     display_format_max: Option<&'p ImStr>,
-    power: f32,
+    flags: SliderFlags,
     _phantom: PhantomData<&'ui Ui<'ui>>,
 }
 
@@ -179,7 +179,7 @@ impl<'ui, 'p> DragFloatRange2<'ui, 'p> {
             max: 0.0,
             display_format: unsafe { ImStr::from_utf8_with_nul_unchecked(b"%.3f\0") },
             display_format_max: None,
-            power: 1.0,
+            flags: SliderFlags::NONE,
             _phantom: PhantomData,
         }
     }
@@ -195,7 +195,7 @@ impl<'ui, 'p> DragFloatRange2<'ui, 'p> {
                 self.max,
                 self.display_format.as_ptr(),
                 self.display_format_max.map_or(ptr::null(), |f| f.as_ptr()),
-                self.power,
+                self.flags.bits(),
             )
         }
     }
@@ -209,7 +209,7 @@ impl<'ui, 'p> DragFloatRange2<'ui, 'p> {
     impl_display_format!(DragFloatRange2);
     impl_min_max!(DragFloatRange2, f32);
     impl_speed!(DragFloatRange2);
-    impl_power!(DragFloatRange2);
+    impl_flags!(DragFloatRange2);
 }
 
 #[must_use]
@@ -220,6 +220,7 @@ pub struct DragInt<'ui, 'p> {
     min: i32,
     max: i32,
     display_format: &'p ImStr,
+    flags: SliderFlags,
     _phantom: PhantomData<&'ui Ui<'ui>>,
 }
 
@@ -232,6 +233,7 @@ impl<'ui, 'p> DragInt<'ui, 'p> {
             min: 0,
             max: 0,
             display_format: unsafe { ImStr::from_utf8_with_nul_unchecked(b"%.0f\0") },
+            flags: SliderFlags::NONE,
             _phantom: PhantomData,
         }
     }
@@ -245,6 +247,7 @@ impl<'ui, 'p> DragInt<'ui, 'p> {
                 self.min,
                 self.max,
                 self.display_format.as_ptr(),
+                self.flags.bits(),
             )
         }
     }
@@ -252,6 +255,7 @@ impl<'ui, 'p> DragInt<'ui, 'p> {
     impl_display_format!(DragInt);
     impl_min_max!(DragInt, i32);
     impl_speed!(DragInt);
+    impl_flags!(DragInt);
 }
 
 macro_rules! impl_drag_intn {
@@ -264,6 +268,7 @@ macro_rules! impl_drag_intn {
             min: i32,
             max: i32,
             display_format: &'p ImStr,
+            flags: SliderFlags,
             _phantom: PhantomData<&'ui Ui<'ui>>,
         }
 
@@ -276,6 +281,7 @@ macro_rules! impl_drag_intn {
                     min: 0,
                     max: 0,
                     display_format: unsafe { ImStr::from_utf8_with_nul_unchecked(b"%.0f\0") },
+                    flags: SliderFlags::NONE,
                     _phantom: PhantomData,
                 }
             }
@@ -289,13 +295,15 @@ macro_rules! impl_drag_intn {
                         self.min,
                         self.max,
                         self.display_format.as_ptr(),
+                        self.flags.bits(),
                     )
                 }
             }
 
-            impl_display_format!(DragInt);
-            impl_min_max!(DragInt, i32);
-            impl_speed!(DragInt);
+            impl_display_format!($DragIntN);
+            impl_min_max!($DragIntN, i32);
+            impl_speed!($DragIntN);
+            impl_flags!($DragIntN);
         }
     };
 }
@@ -314,6 +322,7 @@ pub struct DragIntRange2<'ui, 'p> {
     max: i32,
     display_format: &'p ImStr,
     display_format_max: Option<&'p ImStr>,
+    flags: SliderFlags,
     _phantom: PhantomData<&'ui Ui<'ui>>,
 }
 
@@ -333,6 +342,7 @@ impl<'ui, 'p> DragIntRange2<'ui, 'p> {
             max: 0,
             display_format: unsafe { ImStr::from_utf8_with_nul_unchecked(b"%.0f\0") },
             display_format_max: None,
+            flags: SliderFlags::NONE,
             _phantom: PhantomData,
         }
     }
@@ -348,6 +358,7 @@ impl<'ui, 'p> DragIntRange2<'ui, 'p> {
                 self.max,
                 self.display_format.as_ptr(),
                 self.display_format_max.map_or(ptr::null(), |f| f.as_ptr()),
+                self.flags.bits(),
             )
         }
     }
@@ -361,4 +372,5 @@ impl<'ui, 'p> DragIntRange2<'ui, 'p> {
     impl_display_format!(DragIntRange2);
     impl_min_max!(DragIntRange2, i32);
     impl_speed!(DragIntRange2);
+    impl_flags!(DragIntRange2);
 }

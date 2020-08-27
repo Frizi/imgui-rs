@@ -84,6 +84,8 @@ pub struct Style {
     ///
     /// Set to 0.0 to have rectangular slider grabs.
     pub grab_rounding: f32,
+    /// The size in pixels of the dead-zone around zero on logarithmic sliders that cross zero.
+    pub log_slider_deadzone: f32,
     /// Rounding radius of upper corners of tabs.
     ///
     /// Set to 0.0 to have rectangular tabs.
@@ -121,6 +123,10 @@ pub struct Style {
     ///
     /// Disable if you are really tight on CPU/GPU.
     pub anti_aliased_lines: bool,
+    ///Enable anti-aliased lines/borders using textures where possible.
+    ///
+    /// Require back-end to render with bilinear filtering. Latched at the beginning of the frame (copied to ImDrawList).
+    pub anti_aliased_lines_use_tex: bool,
     /// Enable anti-aliasing on filled shapes (rounded rectangles, circles, etc.)
     pub anti_aliased_fill: bool,
     /// Tessellation tolerance when using path_bezier_curve_to without a specific number of
@@ -135,7 +141,7 @@ pub struct Style {
     /// Decrease for higher quality but more geometry.
     pub circle_segment_max_error: f32,
     /// Style colors.
-    pub colors: [[f32; 4]; 48],
+    pub colors: [[f32; 4]; 50],
 }
 
 unsafe impl RawCast<sys::ImGuiStyle> for Style {}
@@ -185,7 +191,7 @@ impl IndexMut<StyleColor> for Style {
 }
 
 /// A color identifier for styling
-#[repr(u32)]
+#[repr(i32)]
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum StyleColor {
     Text = sys::ImGuiCol_Text,
@@ -230,6 +236,8 @@ pub enum StyleColor {
     TabActive = sys::ImGuiCol_TabActive,
     TabUnfocused = sys::ImGuiCol_TabUnfocused,
     TabUnfocusedActive = sys::ImGuiCol_TabUnfocusedActive,
+    DockingPreview = sys::ImGuiCol_DockingPreview,
+    DockingEmptyBg = sys::ImGuiCol_DockingEmptyBg,
     PlotLines = sys::ImGuiCol_PlotLines,
     PlotLinesHovered = sys::ImGuiCol_PlotLinesHovered,
     PlotHistogram = sys::ImGuiCol_PlotHistogram,
@@ -287,6 +295,8 @@ impl StyleColor {
         StyleColor::TabActive,
         StyleColor::TabUnfocused,
         StyleColor::TabUnfocusedActive,
+        StyleColor::DockingPreview,
+        StyleColor::DockingEmptyBg,
         StyleColor::PlotLines,
         StyleColor::PlotLinesHovered,
         StyleColor::PlotHistogram,
@@ -375,6 +385,7 @@ fn test_style_scaling() {
     style.grab_min_size = 21.0;
     style.grab_rounding = 22.0;
     style.tab_rounding = 23.0;
+    style.log_slider_deadzone = 4.0;
     style.display_window_padding = [24.0, 25.0];
     style.display_safe_area_padding = [26.0, 27.0];
     style.mouse_cursor_scale = 28.0;
@@ -396,6 +407,7 @@ fn test_style_scaling() {
     assert_eq!(style.grab_min_size, 42.0);
     assert_eq!(style.grab_rounding, 44.0);
     assert_eq!(style.tab_rounding, 46.0);
+    assert_eq!(style.log_slider_deadzone, 8.0);
     assert_eq!(style.display_window_padding, [48.0, 50.0]);
     assert_eq!(style.display_safe_area_padding, [52.0, 54.0]);
     assert_eq!(style.mouse_cursor_scale, 56.0);
@@ -446,6 +458,7 @@ fn test_style_memory_layout() {
     assert_field_offset!(scrollbar_rounding, ScrollbarRounding);
     assert_field_offset!(grab_min_size, GrabMinSize);
     assert_field_offset!(grab_rounding, GrabRounding);
+    assert_field_offset!(log_slider_deadzone, LogSliderDeadzone);
     assert_field_offset!(tab_rounding, TabRounding);
     assert_field_offset!(tab_border_size, TabBorderSize);
     assert_field_offset!(
@@ -459,6 +472,7 @@ fn test_style_memory_layout() {
     assert_field_offset!(display_safe_area_padding, DisplaySafeAreaPadding);
     assert_field_offset!(mouse_cursor_scale, MouseCursorScale);
     assert_field_offset!(anti_aliased_lines, AntiAliasedLines);
+    assert_field_offset!(anti_aliased_lines_use_tex, AntiAliasedLinesUseTex);
     assert_field_offset!(anti_aliased_fill, AntiAliasedFill);
     assert_field_offset!(curve_tessellation_tol, CurveTessellationTol);
     assert_field_offset!(circle_segment_max_error, CircleSegmentMaxError);

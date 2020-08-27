@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use std::f32;
 use std::ops::{Index, IndexMut};
-use std::os::raw::{c_char, c_int, c_void};
+use std::os::raw::{c_char, c_void};
 use std::time::Duration;
 
 use crate::fonts::atlas::FontAtlas;
@@ -14,7 +14,7 @@ use crate::sys;
 bitflags! {
     /// Configuration flags
     #[repr(transparent)]
-    pub struct ConfigFlags: u32 {
+    pub struct ConfigFlags: i32 {
         /// Master keyboard navigation enable flag.
         ///
         /// `frame()` will automatically fill `io.nav_inputs` based on `io.keys_down`.
@@ -58,7 +58,7 @@ bitflags! {
 bitflags! {
     /// Backend capabilities
     #[repr(transparent)]
-    pub struct BackendFlags: u32 {
+    pub struct BackendFlags: i32 {
         /// Backend supports gamepad and currently has one connected
         const HAS_GAMEPAD = sys::ImGuiBackendFlags_HasGamepad;
         /// Backend supports honoring `get_mouse_cursor` value to change the OS cursor shape
@@ -75,7 +75,7 @@ bitflags! {
 }
 
 /// An input identifier for navigation
-#[repr(u32)]
+#[repr(i32)]
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum NavInput {
     Activate = sys::ImGuiNavInput_Activate,
@@ -174,6 +174,33 @@ pub struct Io {
     /// framebuffer coordinates
     pub display_framebuffer_scale: [f32; 2],
 
+    /// Simplified docking mode: disable window splitting, so docking is limited to merging
+    /// multiple windows together into tab-bars.
+    pub config_docking_no_split: bool,
+    /// Enable docking with holding Shift key (reduce visual noise, allows dropping in wider space)
+    pub config_docking_with_shift: bool,
+    /// [BETA] [FIXME: This currently creates regression with auto-sizing and general overhead]
+    /// Make every single floating window display within a docking node.
+    pub config_docking_always_tab_bar: bool,
+    /// [BETA] Make window or viewport transparent when docking and only display docking boxes on the target viewport.
+    /// Useful if rendering of multiple viewport cannot be synced. Best used with ConfigViewportsNoAutoMerge.
+    pub config_docking_transparent_payload: bool,
+    /// Set to make all floating imgui windows always create their own viewport. Otherwise, they are merged into
+    /// the main host viewports when overlapping it. May also set ImGuiViewportFlags_NoAutoMerge on individual viewport.
+    pub config_viewports_no_auto_merge: bool,
+    /// Disable default OS task bar icon flag for secondary viewports. When a viewport doesn't want a task bar icon,
+    /// ImGuiViewportFlags_NoTaskBarIcon will be set on it.
+    pub config_viewports_no_task_bar_icon: bool,
+    /// [BETA] Disable default OS window decoration flag for secondary viewports. When a viewport doesn't want
+    /// window decorations, ImGuiViewportFlags_NoDecoration will be set on it. Enabling decoration can create
+    /// subsequent issues at OS levels (e.g. minimum window size).
+    pub config_viewports_no_decoration: bool,
+    /// Disable default OS parenting to main viewport for secondary viewports. By default, viewports are marked
+    /// with ParentViewportId = <main_viewport>, expecting the platform back-end to setup a parent/child relationship
+    /// between the OS windows (some back-end may ignore this). Set to true if you want the default to be 0,
+    /// then all viewports will be top-level OS windows.
+    pub config_viewports_no_default_parent: bool,
+
     /// Request imgui-rs to draw a mouse cursor for you
     pub mouse_draw_cursor: bool,
     /// macOS-style input behavior.
@@ -211,8 +238,8 @@ pub struct Io {
     pub(crate) set_clipboard_text_fn:
         Option<unsafe extern "C" fn(user_data: *mut c_void, text: *const c_char)>,
     pub(crate) clipboard_user_data: *mut c_void,
-    ime_set_input_screen_pos_fn: Option<unsafe extern "C" fn(x: c_int, y: c_int)>,
-    ime_window_handle: *mut c_void,
+    // ime_set_input_screen_pos_fn: Option<unsafe extern "C" fn(x: c_int, y: c_int)>,
+    // ime_window_handle: *mut c_void,
     render_draw_lists_fn_unused: *mut c_void,
 
     /// Mouse position, in pixels.
@@ -230,6 +257,7 @@ pub struct Io {
     /// Most users don't have a mouse with a horizontal wheel, and may not be filled by all
     /// backends.
     pub mouse_wheel_h: f32,
+    pub mouse_hovered_viewport: u32,
     /// Keyboard modifier pressed: Control
     pub key_ctrl: bool,
     /// Keyboard modifier pressed: Shift
@@ -409,6 +437,23 @@ fn test_io_memory_layout() {
     assert_field_offset!(font_allow_user_scaling, FontAllowUserScaling);
     assert_field_offset!(font_default, FontDefault);
     assert_field_offset!(display_framebuffer_scale, DisplayFramebufferScale);
+    assert_field_offset!(config_docking_no_split, ConfigDockingNoSplit);
+    assert_field_offset!(config_docking_with_shift, ConfigDockingWithShift);
+    assert_field_offset!(config_docking_always_tab_bar, ConfigDockingAlwaysTabBar);
+    assert_field_offset!(
+        config_docking_transparent_payload,
+        ConfigDockingTransparentPayload
+    );
+    assert_field_offset!(config_viewports_no_auto_merge, ConfigViewportsNoAutoMerge);
+    assert_field_offset!(
+        config_viewports_no_task_bar_icon,
+        ConfigViewportsNoTaskBarIcon
+    );
+    assert_field_offset!(config_viewports_no_decoration, ConfigViewportsNoDecoration);
+    assert_field_offset!(
+        config_viewports_no_default_parent,
+        ConfigViewportsNoDefaultParent
+    );
     assert_field_offset!(mouse_draw_cursor, MouseDrawCursor);
     assert_field_offset!(config_mac_os_behaviors, ConfigMacOSXBehaviors);
     assert_field_offset!(config_input_text_cursor_blink, ConfigInputTextCursorBlink);
@@ -428,13 +473,14 @@ fn test_io_memory_layout() {
     assert_field_offset!(get_clipboard_text_fn, GetClipboardTextFn);
     assert_field_offset!(set_clipboard_text_fn, SetClipboardTextFn);
     assert_field_offset!(clipboard_user_data, ClipboardUserData);
-    assert_field_offset!(ime_set_input_screen_pos_fn, ImeSetInputScreenPosFn);
-    assert_field_offset!(ime_window_handle, ImeWindowHandle);
+    // assert_field_offset!(ime_set_input_screen_pos_fn, ImeSetInputScreenPosFn);
+    // assert_field_offset!(ime_window_handle, ImeWindowHandle);
     assert_field_offset!(render_draw_lists_fn_unused, RenderDrawListsFnUnused);
     assert_field_offset!(mouse_pos, MousePos);
     assert_field_offset!(mouse_down, MouseDown);
     assert_field_offset!(mouse_wheel, MouseWheel);
     assert_field_offset!(mouse_wheel_h, MouseWheelH);
+    assert_field_offset!(mouse_hovered_viewport, MouseHoveredViewport);
     assert_field_offset!(key_ctrl, KeyCtrl);
     assert_field_offset!(key_shift, KeyShift);
     assert_field_offset!(key_alt, KeyAlt);
